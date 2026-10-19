@@ -1,0 +1,44 @@
+
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python test and tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# React / Node
+ui-react/node_modules/
+ui-react/dist/
+ui-react/.vite/
+
+# User-uploaded projects and local data
+web-sites/
+
+# Logs
+*.log
+
+# IDEs and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+ignore
+
+semgrep-results.json
+
