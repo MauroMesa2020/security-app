@@ -1,11 +1,41 @@
 
 services:
-  app:
-    image: mauromesa2020/security-analysis-app:latest
-    container_name: security-app
+
+  nginx:
+    image: nginx:alpine
+    container_name: security-nginx
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5000:5000"
+      # Only from this machine
+      - "127.0.0.1:80:80"
+    # ports:
+    # - "80:80" # Access from anywhere on LAN
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    
+    depends_on:
+      - frontend
+      - app
+
+    networks:
+      - frontend-network
+      - backend-network
+
+  frontend:
+    build: 
+      context: ./ui-react
+      dockerfile: Dockerfile
+    container_name: security-frontend
+    restart: unless-stopped
+    networks:
+      - frontend-network
+
+  app:
+    image: mauromesa2020/security-analysis-app:latest
+    # container_name: security-app # Removing to scale
+    restart: unless-stopped
+    # ports:
+    #   - "127.0.0.1:5000:5000" # Access only from nginx
     env_file:
       - .env
     environment:
@@ -13,18 +43,24 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     volumes:
       - ./web-sites:/app/web-sites
+
+    expose:
+      - "5000"
     depends_on:
       db:
         condition: service_healthy
       zap:
         condition: service_started
 
+    networks:
+      - backend-network
+
   zap:
     image: ghcr.io/zaproxy/zaproxy:stable
     container_name: owasp-zap
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8080:8080"
+    # ports:
+    #   - "127.0.0.1:8080:8080" # Access only from app
     command:
       - zap.sh
       - -daemon
@@ -38,6 +74,13 @@ services:
       - api.addrs.addr.name=.*
       - -config
       - api.addrs.addr.regex=true
+    
+    expose:
+      - "8080"
+    
+    networks:
+      - backend-network
+
 
   db:
     image: postgres:17
@@ -47,8 +90,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "127.0.0.1:5432:5432"
+    # ports:
+    #   - "127.0.0.1:5432:5432" # Access only from app
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d:ro
@@ -60,5 +103,12 @@ services:
       timeout: 5s
       retries: 10
 
+    networks:
+      - backend-network
+
 volumes:
   postgres_data:
+
+networks:
+  frontend-network:
+  backend-network:
